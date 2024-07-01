@@ -1,7 +1,8 @@
 /.*
 !.gitignore
 !.gitattributes
-__pycache__/
+
+
 /TurboPi/
 /create_ap/
 /Desktop/
@@ -14,3 +15,7 @@ __pycache__/
 /Public/
 /Templates/
 /Videos/
+
+# python stuff
+__pycache__/
+*.egg-info**
