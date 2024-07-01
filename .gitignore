@@ -1,0 +1,16 @@
+.*
+!.gitignore
+!.gitattributes
+__pycache__/
+/TurboPi/
+/create_ap/
+/Desktop/
+/Documents/
+/Downloads/
+/hiwonder-toolbox/
+/LAB_Tool/
+/Music/
+/Pictures/
+/Public/
+/Templates/
+/Videos/
