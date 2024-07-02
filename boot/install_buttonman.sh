@@ -5,6 +5,21 @@ if [ "$(id -u)" -ne 0 ]; then
         exit 1
 fi
 
+BASHRC='/home/pi/.bashrc'
+
+function update_bashrc {
+    LINE=$1
+    eval $LINE
+    grep -qF -- "$LINE" "$BASHRC"
+    RES=$?
+    if [ $RES -eq 1 ]; then
+        echo "$LINE" >> "$BASHRC"
+        return 0
+    else
+        return 1
+    fi
+}
+
 echo 'Updating pip'
 
 python -m pip install --upgrade pip
@@ -23,5 +38,13 @@ systemctl disable hw_button_scan.service
 systemctl stop hw_button_scan.service
 systemctl enable buttonman.service
 systemctl start buttonman.service
+echo
+echo 'Checking if aliases already installed...'
+update_bashrc "alias batt='sudo python3 /home/pi/boot/battchk.py'"
+if [ $? -eq 0 ]; then
+    echo 'Added alias for battery check: batt'
+else
+    echo 'Alias already exists for battery check: batt'
+fi
 echo
 echo Done!

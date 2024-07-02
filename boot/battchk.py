@@ -23,20 +23,22 @@ except ImportError:
     warnings.warn("buttonman was not imported, so no processes can be registered. This means the process can't be stopped by buttonman.",  # noqa: E501
                   ImportWarning, stacklevel=2)
 
+sys.stdout.reconfigure(encoding="utf-8")
+
 
 #######
 
 environ_silent = os.environ.get('silent', None)
 do_beeps = environ_silent is None or environ_silent.lower() == 'false'
+do_flash = True
 
-if do_beeps:
-    Board.setBuzzer(0)  # initialize buzzer
 BUZZER_PIN = 31  # board pin numbering
 KEY1_PIN = 33
 KEY2_PIN = 16
 KDN = GPIO.LOW
 KUP = GPIO.HIGH
 
+n = 10
 __stop = False
 button_listen = False
 button_states = [KUP, KUP]
@@ -47,6 +49,7 @@ rgb = {
     'red': (255, 0, 0),
     'green': (0, 255, 0),
     'blue': (0, 0, 255),
+    'lime': (80, 222, 0),
     'yellow': (200, 200, 0),
     'orange': (255, 50, 0),
     'black': (0, 0, 0),
@@ -73,6 +76,8 @@ def buzzer(value):
 
 
 def all_leds(r, g, b):
+    if not do_flash:
+        return
     r, g, b = int(r), int(g), int(b)
     for i in range(2):
         Board.RGB.setPixelColor(i, Board.PixelColor(r, g, b))
@@ -104,7 +109,7 @@ def median(li):
 
 def voltage_detection():
     try:
-        waitif(0.05)
+        waitif(0.1)
         v = Board.getBattery() / 1000.0
         if 0 < v < 16:
             return v
@@ -119,9 +124,29 @@ def voltage_color(voltage: float):
         return rgb['orange']
     if 3.7 <= voltage < 3.9:
         return rgb['yellow']
+    if 3.9 <= voltage < 4.05:
+        return rgb['lime']
     if voltage >= 3.9:
         return rgb['green']
     return (100, 0, 100)
+
+
+def voltage_goodness(voltage: float):
+    if voltage is None:
+        return "[░░░░░] ERROR"
+    if 0.8 <= voltage < 3.3:
+        return "[    ]  VERY LOW CHARGE IMMEDIATELY"
+    if 3.3 <= voltage < 3.5:
+        return "[■   ] Low "
+    if 3.5 <= voltage < 3.7:
+        return "[■■  ] Normal"
+    if 3.7 <= voltage < 3.9:
+        return "[■■■ ] Normal"
+    if 3.9 <= voltage < 4.05:
+        return "[■■■ ] Near Full"
+    if 4.05 <= voltage < 5:
+        return "[■■■■] Full"
+    return "[░░░░░] ERROR"
 
 
 def decimal_split(x: float, precision=1, mode='digit'):
@@ -142,23 +167,26 @@ def beepn(n, color):
         ledbeepfor(color, .3, .2)
 
 
-def loop():
+def measure_voltage(n: int = 1):
     measurements = [voltage_detection() for _ in range(5)]
     measurements = [x for x in measurements if x is not None]
-    print(measurements)
     if not measurements:
-        return
+        return None, None
     voltage = median(measurements)
-    cell = voltage / 2
-    v = cell
+    cell_voltage = voltage / 2
+    return cell_voltage, measurements
+
+
+def loop():
+    v, _ = measure_voltage(5)
     color = voltage_color(v)
     a, b = decimal_split(v, precision=1, mode='whole')
-    print(f"{a}.{b}\t{voltage:.3f}\t{color}")
+    print(f"{a}.{b}\t{v:.3f}\t{color}")
     beepn(a, color)
     if waitif(1):
         return
     beepn(b, color)
-    if waitif(2.8):
+    if waitif(2.2):
         return
 
 
@@ -182,10 +210,19 @@ def stop():
 
 
 def main():
-    s.setRGBMode(0)
-    for _ in range(10):
+    if do_beeps:
+        Board.setBuzzer(0)  # initialize buzzer
+    if do_flash:
+        s.setRGBMode(0)
+    for _ in range(n):
         if not __stop:
             loop()
+    if not n:  # if n == 0 or None
+        cell, measurements = measure_voltage(10)
+        print(measurements)
+        print(f"Status:\t\t{voltage_goodness(cell)}")
+        print(f"Cell Voltage:\t{cell:.3f}")
+        return
     while __stop and button_listen and KDN in button_states:
         time.sleep(spin_period)  # trap if waiting for buttons to be unpressed...
 
@@ -215,7 +252,23 @@ def btn_handler(channel, state):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--__listen_button_exit', action='store_true')
+    parser.add_argument('--silent', action='store_true')
+    parser.add_argument('--quiet', action='store_true')
+    parser.add_argument('-s', '--stealth', action='store_true')
+    parser.add_argument('-n', type=int, default=None)
     args = parser.parse_args()
+
+    if args.silent or args.quiet:
+        do_beeps = False
+
+    if args.n is not None:
+        n = args.n
+
+    if args.stealth:
+        if args.n is None:
+            n = 0
+        do_beeps = False
+        do_flash = False
 
     signal.signal(signal.SIGINT, lambda s, h: stop())
 
