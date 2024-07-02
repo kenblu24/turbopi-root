@@ -206,7 +206,7 @@ class BinaryProgram:
     def control(self):
         self.set_rgb('green' if bool(self.smoothed_detected) else 'red')
         if not self.dry_run:
-            if self.smoothed_detected:
+            if self.smoothed_detected:  # smoothed_detected is a low-pass filtered detection
                 self.chassis.set_velocity(100, 90, -0.5)  # Control robot movement function
                 # linear speed 50 (0~100), direction angle 90 (0~360), yaw angular speed 0 (-2~2)
             else:
