@@ -90,14 +90,15 @@ class SNNMillingProgram(BinaryProgram):
             self.chassis.set_velocity(v, 90, w)
 
 
-def get_parser(parser, subparser):
-    return parser, subparser
+def get_parser(parser: argparse.ArgumentParser, subparsers=None):
+    parser.add_argument('--network', type=str, default=DEFAULT_NETWORK_PATH)
+    return parser, subparsers
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser, subparser = milling_controller.get_parser(parser, None)
-    parser, subparser = get_parser(parser, None)
+    parser, subparsers = milling_controller.get_parser(parser)
+    parser, subparsers = get_parser(parser)
     args = parser.parse_args()
 
     program = SNNMillingProgram(dry_run=args.dry_run, pause=args.startpaused)
