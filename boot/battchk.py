@@ -23,6 +23,8 @@ except ImportError:
     warnings.warn("buttonman was not imported, so no processes can be registered. This means the process can't be stopped by buttonman.",  # noqa: E501
                   ImportWarning, stacklevel=2)
 
+sys.stdout.reconfigure(encoding="utf-8")
+
 
 #######
 
@@ -267,8 +269,6 @@ if __name__ == "__main__":
             n = 0
         do_beeps = False
         do_flash = False
-
-
 
     signal.signal(signal.SIGINT, lambda s, h: stop())
 
