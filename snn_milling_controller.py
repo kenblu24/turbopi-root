@@ -21,16 +21,7 @@ except ImportError:
     warnings.warn("buttonman was not imported, so no processes can be registered. This means the process can't be stopped by buttonman.",  # noqa: E501
                   ImportWarning, stacklevel=2)
 
-network_json_path = '/home/pi/networks/experiment_tenn2_mill20240422_1000t_n10_p100_e1000_s23.json'
-
-neuro_tpc = 10
-with open(network_json_path) as f:
-    j = json.loads(f.read())
-network = casPYan.network.network_from_json(j)
-nodes = list(network.nodes.values())
-
-encoders = [ende.RateEncoder(neuro_tpc, [0.0, 1.0]) for _ in range(2)]
-decoders = [ende.RateDecoder(neuro_tpc, [0.0, 1.0]) for _ in range(4)]
+DEFAULT_NETWORK_PATH = '/home/pi/networks/turbopi-milling_n10.json'
 
 
 def bool_to_one_hot(x: bool):
@@ -40,46 +31,65 @@ def bool_to_one_hot(x: bool):
 b2oh = bool_to_one_hot
 
 
-def get_input_spikes(encoders, input_vector):
-    input_slice = input_vector[:len(encoders)]
-    return [enc.get_spikes(x) for enc, x in zip(encoders, input_slice)]
-    # returns a vector of list of spikes for each node
-
-
-def apply_spikes(inputs, spikes_per_node):
-    for node, spikes in zip(inputs, spikes_per_node):
-        node.intake += spikes
-
-
-def decode_output(outputs):
-    return [dec.decode(node.history) for dec, node in zip(decoders, outputs)]
-
-
 class SNNMillingProgram(BinaryProgram):
+    neuro_tpc = 10
+
     def __init__(self,
         dry_run: bool = False,
         board=None,
         lab_cfg_path=milling_controller.THRESHOLD_CFG_PATH,
         servo_cfg_path=milling_controller.SERVO_CFG_PATH,
+        network=None,
         pause=False,
         startup_beep=True,
         exit_on_stop=True
     ) -> None:
         super().__init__(dry_run, board, lab_cfg_path, servo_cfg_path, pause, False, exit_on_stop)
 
+        self.encoders = [ende.RateEncoder(self.neuro_tpc, [0.0, 1.0]) for _ in range(2)]
+        self.decoders = [ende.RateDecoder(self.neuro_tpc, [0.0, 1.0]) for _ in range(4)]
+
+        self.network = None
+        if isinstance(network, str):
+            self.set_network(self.read_net_json(network))
+
         if startup_beep:
             self.startup_beep()
+
+    @staticmethod
+    def read_net_json(path: str):
+        with open(path) as f:
+            j = json.loads(f.read())
+        return casPYan.network.network_from_json(j)
+
+    def set_network(self, network):
+        self.nodes = list(network.nodes.values())
+
+    def get_input_spikes(self, input_vector):
+        input_slice = input_vector[:len(self.encoders)]
+        return [enc.get_spikes(x) for enc, x in zip(self.encoders, input_slice)]
+        # returns a vector of list of spikes for each node
+
+    def apply_spikes(self, spikes_per_node):
+        for node, spikes in zip(self.network.inputs, spikes_per_node):
+            node.intake += spikes
+
+    def decode_output(self):
+        return [dec.decode(node.history) for dec, node in zip(self.decoders, self.network.outputs)]
+
+    def run(self, ticks: int):
+        casPYan.network.run(self.nodes, ticks)
 
     def startup_beep(self):
         self.buzzfor(.03, .05)
         self.buzzfor(.03, .05)
 
     def control(self):
-        spikes_per_node = get_input_spikes(encoders, b2oh(self.detected))
-        apply_spikes(network.inputs, spikes_per_node)
-        casPYan.network.run(nodes, 5)
-        casPYan.network.run(nodes, neuro_tpc)
-        v0, v1, w0, w1 = decode_output(network.outputs)
+        spikes_per_node = self.get_input_spikes(b2oh(self.detected))
+        self.apply_spikes(spikes_per_node)
+        self.run(5)
+        self.run(self.neuro_tpc)
+        v0, v1, w0, w1 = self.decode_output()
 
         v = 100 * (v1 - v0)
         w = 2.0 * (w1 - w0)
@@ -101,5 +111,9 @@ if __name__ == '__main__':
     parser, subparsers = get_parser(parser)
     args = parser.parse_args()
 
-    program = SNNMillingProgram(dry_run=args.dry_run, pause=args.startpaused)
+    program = SNNMillingProgram(
+        dry_run=args.dry_run,
+        pause=args.startpaused,
+        network=args.network,
+    )
     program.main()
