@@ -366,15 +366,15 @@ class BinaryProgram:
             cv2.FONT_HERSHEY_SIMPLEX, 0.65, color, 2)
 
 
-def get_parser(parser, subparser):
+def get_parser(parser, subparsers=None):
     parser.add_argument("--dry_run", action='store_true')
     parser.add_argument("--startpaused", action='store_true')
-    return parser, subparser
+    return parser, subparsers
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    get_parser(parser, None)
+    get_parser(parser)
     args = parser.parse_args()
 
     program = BinaryProgram(dry_run=args.dry_run, pause=args.startpaused)
