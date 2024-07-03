@@ -63,6 +63,7 @@ class SNNMillingProgram(BinaryProgram):
         return casPYan.network.network_from_json(j)
 
     def set_network(self, network):
+        self.network = network
         self.nodes = list(network.nodes.values())
 
     def get_input_spikes(self, input_vector):
