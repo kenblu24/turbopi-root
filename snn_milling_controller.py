@@ -92,8 +92,8 @@ class SNNMillingProgram(BinaryProgram):
         self.run(self.neuro_tpc)
         v0, v1, w0, w1 = self.decode_output()
 
-        v = 100 * (v1 - v0)
-        w = 2.0 * (w1 - w0)
+        v = 56.65 * (v1 - v0)
+        w = 1.574 * (w1 - w0)
 
         # print(v, w)
         self.set_rgb('green' if bool(self.detected) else 'red')
