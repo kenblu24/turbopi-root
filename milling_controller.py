@@ -2,9 +2,9 @@
 # coding=utf8
 # from contextlib import ExitStack
 import sys
-
 sys.path.append('/home/pi/TurboPi/')
 sys.path.append('/home/pi/boot/')
+import socket
 import os
 import cv2
 import time
@@ -16,43 +16,51 @@ import numpy as np
 import operator
 import argparse
 import RPi.GPIO as GPIO
-# import threading
-
-# import yaml_handle
 import HiwonderSDK.Board as Board
 import HiwonderSDK.mecanum as mecanum
-
 import hiwonder_common.statistics_tools as st
 
-# typing
 from typing import Any
 
-import warnings
+
+
 try:
     import buttonman as buttonman
     buttonman.TaskManager.register_stoppable()
 except ImportError:
     buttonman = None
-    warnings.warn("buttonman was not imported, so no processes can be registered. This means the process can't be stopped by buttonman.",  # noqa: E501
-                  ImportWarning, stacklevel=2)
-
+    warnings.warn(
+        "buttonman was not imported, so no processes can be registered. This means the process can't be stopped by buttonman.",
+        ImportWarning, stacklevel=2)
 
 KEY1_PIN = 33  # board numbering
 KEY2_PIN = 16
 KDN = GPIO.LOW
 KUP = GPIO.HIGH
 BUZZER_PIN = 31
-# path = '/home/pi/TurboPi/'
 THRESHOLD_CFG_PATH = '/home/pi/TurboPi/lab_config.yaml'
 SERVO_CFG_PATH = '/home/pi/TurboPi/servo_config.yaml'
 
+SERVER_IP = '192.168.1.168'  # Replace with the IP address of main PC
+SERVER_PORT = 1555
 
+def wait_for_start_signal(program):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
+        client_socket.connect((SERVER_IP, SERVER_PORT))
+        print("Connected to server, waiting for start/stop signal...")
+        signal = client_socket.recv(1024).decode()
+        while True:
+            if signal == "START":
+                    print("Received start signal, starting operations...")
+                    break
+            time.sleep(1)
+        signal = client_socket.recv(1024).decode()
+        if signal =="STOP":
+            program.stop()
 def get_yaml_data(yaml_file):
     with open(yaml_file, 'r', encoding='utf-8') as file:
         file_data = file.read()
-
     return yaml.load(file_data, Loader=yaml.FullLoader)
-
 
 range_bgr = {
     'red': (0, 0, 255),
@@ -62,17 +70,8 @@ range_bgr = {
     'white': (255, 255, 255),
 }
 
-
 class BinaryProgram:
-    def __init__(self,
-        dry_run: bool = False,
-        board=None,
-        lab_cfg_path=THRESHOLD_CFG_PATH,
-        servo_cfg_path=SERVO_CFG_PATH,
-        pause=False,
-        startup_beep=True,
-        exit_on_stop=True
-    ) -> None:
+    def __init__(self, dry_run: bool = False, board=None, lab_cfg_path=THRESHOLD_CFG_PATH, servo_cfg_path=SERVO_CFG_PATH, pause=False, startup_beep=True, exit_on_stop=True) -> None:
         self._run = not pause
         self.preview_size = (640, 480)
 
@@ -206,7 +205,7 @@ class BinaryProgram:
     def control(self):
         self.set_rgb('green' if bool(self.smoothed_detected) else 'red')
         if not self.dry_run:
-            if self.smoothed_detected:  # smoothed_detected is a low-pass filtered detection
+            if self.smoothed_detected:
                 self.chassis.set_velocity(100, 90, -0.5)  # Control robot movement function
                 # linear speed 50 (0~100), direction angle 90 (0~360), yaw angular speed 0 (-2~2)
             else:
@@ -270,7 +269,6 @@ class BinaryProgram:
             time.sleep(1E-3)
 
     def main(self):
-
         def sigint_handler(sig, frame):
             self.stop()
 
@@ -283,6 +281,8 @@ class BinaryProgram:
         self.init_move()
         self.camera = Camera.Camera()
         self.camera.camera_open(correction=True)  # Enable distortion correction, not enabled by default
+
+        wait_for_start_signal(self)
 
         signal.signal(signal.SIGINT, sigint_handler)
         signal.signal(signal.SIGTERM, sigint_handler)
@@ -364,18 +364,30 @@ class BinaryProgram:
         # Print the detected color on the screen
         cv2.putText(img, f"fps: {fps:.3}", (10, 20),
             cv2.FONT_HERSHEY_SIMPLEX, 0.65, color, 2)
+            
+            
+    def start_main_loop(self):
+        while True:
+            if self._run:
+                self.main_loop()
+            else:
+                time.sleep(1)
 
-
-def get_parser(parser, subparsers=None):
+def get_parser(parser, subparser):
     parser.add_argument("--dry_run", action='store_true')
     parser.add_argument("--startpaused", action='store_true')
-    return parser, subparsers
-
+    return parser, subparser
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    get_parser(parser)
+    get_parser(parser, None)
     args = parser.parse_args()
 
     program = BinaryProgram(dry_run=args.dry_run, pause=args.startpaused)
     program.main()
+    
+    
+    
+    signal_thread = threading.Thread(target=wait_for_start_signal, args=(program,))
+    signal_thread.start()
+    program.start_main_loop()
