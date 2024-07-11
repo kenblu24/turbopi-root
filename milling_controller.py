@@ -15,8 +15,9 @@ import yaml
 import numpy as np
 import operator
 import argparse
+import socket
+import threading
 import RPi.GPIO as GPIO
-# import threading
 
 # import yaml_handle
 import HiwonderSDK.Board as Board
@@ -45,6 +46,33 @@ BUZZER_PIN = 31
 # path = '/home/pi/TurboPi/'
 THRESHOLD_CFG_PATH = '/home/pi/TurboPi/lab_config.yaml'
 SERVO_CFG_PATH = '/home/pi/TurboPi/servo_config.yaml'
+
+UDP_PORT = 27272
+MAGIC = b'pi__F00#VML'
+
+
+def udp_listener(program):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # create UDP socket
+    s.bind(('', UDP_PORT))
+
+    def act(data, addr):
+        split = s.split("cmd:\n", 1)
+        try:
+            cmd = split[1]
+        except IndexError:
+            return
+
+        if b'halt' in cmd or b'stop' in cmd:
+            program.stop()
+        if b'unpause' in cmd or b'resume' in cmd:
+            program.resume()
+        elif b'pause' in cmd:
+            program.pause()
+
+    while 1:
+        data, addr = s.recvfrom(1024)  # wait for a packet
+        if data.startswith(MAGIC):
+            act(data[len(MAGIC):], addr)
 
 
 def get_yaml_data(yaml_file):
@@ -288,6 +316,9 @@ class BinaryProgram:
         signal.signal(signal.SIGTERM, sigint_handler)
         signal.signal(signal.SIGTSTP, sigtstp_handler)
         signal.signal(signal.SIGCONT, sigcont_handler)
+
+        listener = threading.Thread(target=udp_listener, args=(self,))
+        listener.start()
 
         def loop():
             t_start = time.time_ns()
