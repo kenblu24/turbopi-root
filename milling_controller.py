@@ -56,7 +56,7 @@ def udp_listener(program):
     s.bind(('', UDP_PORT))
 
     def act(data, addr):
-        split = s.split("cmd:\n", 1)
+        split = data.split(b"cmd:\n", 1)
         try:
             cmd = split[1]
         except IndexError:
@@ -347,6 +347,7 @@ class BinaryProgram:
                     self.stop()
                     raise
             else:
+                self.kill_motors()
                 time.sleep(0.01)
 
         self.stop()
