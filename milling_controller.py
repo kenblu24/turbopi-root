@@ -50,9 +50,12 @@ SERVO_CFG_PATH = '/home/pi/TurboPi/servo_config.yaml'
 UDP_PORT = 27272
 MAGIC = b'pi__F00#VML'
 
+listener_run = True
+
 
 def udp_listener(program):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # create UDP socket
+    s.settimeout(1)
     s.bind(('', UDP_PORT))
 
     def act(data, addr):
@@ -63,16 +66,25 @@ def udp_listener(program):
             return
 
         if b'halt' in cmd or b'stop' in cmd:
-            program.stop()
+            global listener_run
+            listener_run = False
+            program._run = False
+            program._stop_soon = True
+            return True
         if b'unpause' in cmd or b'resume' in cmd:
             program.resume()
         elif b'pause' in cmd:
             program.pause()
 
-    while 1:
-        data, addr = s.recvfrom(1024)  # wait for a packet
+    while listener_run:
+        try:
+            data, addr = s.recvfrom(1024)  # wait for a packet
+        except socket.timeout:
+            continue
         if data.startswith(MAGIC):
-            act(data[len(MAGIC):], addr)
+            stop = act(data[len(MAGIC):], addr)
+            if stop:
+                return
 
 
 def get_yaml_data(yaml_file):
@@ -102,6 +114,8 @@ class BinaryProgram:
         exit_on_stop=True
     ) -> None:
         self._run = not pause
+        self._stop_soon = False
+        self.listener = None
         self.preview_size = (640, 480)
 
         self.target_color = ('green')
@@ -199,12 +213,14 @@ class BinaryProgram:
         print("ColorDetect Resumed")
 
     def stop(self):
+        global listener_run
         self._run = False
         self.chassis.set_velocity(0, 0, 0)
         if self.camera:
             self.camera.camera_close()
         self.set_rgb('None')
         cv2.destroyAllWindows()
+        listener_run = False
         print("ColorDetect Stop")
         if buttonman:
             buttonman.TaskManager.unregister()
@@ -317,8 +333,8 @@ class BinaryProgram:
         signal.signal(signal.SIGTSTP, sigtstp_handler)
         signal.signal(signal.SIGCONT, sigcont_handler)
 
-        listener = threading.Thread(target=udp_listener, args=(self,))
-        listener.start()
+        self.listener = threading.Thread(target=udp_listener, args=(self,))
+        self.listener.start()
 
         def loop():
             t_start = time.time_ns()
@@ -335,8 +351,8 @@ class BinaryProgram:
                     loop()
                 except KeyboardInterrupt:
                     print('Received KeyboardInterrupt')
+                    self.exit_on_stop = True
                     self.stop()
-                    break
                 except BaseException as err:
                     errors += 1
                     suffix = ('th', 'st', 'nd', 'rd', 'th')
@@ -349,6 +365,8 @@ class BinaryProgram:
             else:
                 self.kill_motors()
                 time.sleep(0.01)
+            if self._stop_soon:
+                self.stop()
 
         self.stop()
 
