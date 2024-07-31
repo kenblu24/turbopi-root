@@ -254,7 +254,7 @@ class BinaryProgram:
                 self.chassis.set_velocity(100, 90, 0)  # Control robot movement function
                 # linear speed 50 (0~100), direction angle 90 (0~360), yaw angular speed 0 (-2~2)
             else:
-                self.chassis.set_velocity(100, 90, 0.174)
+                self.chassis.set_velocity(100, 90, 0.5)
 
     def main_loop(self):
         avg_fps = self.fps_averager(self.fps)  # feed the averager
