@@ -75,6 +75,8 @@ def udp_listener(program):
             program.resume()
         elif b'pause' in cmd:
             program.pause()
+        elif b'switch' in cmd:
+            BinaryProgram.cur_mode = cmd[-1]
 
     while listener_run:
         try:
@@ -142,7 +144,14 @@ class BinaryProgram:
         self.detected = False
         self.boolean_detection_averager = st.Average(10)
 
-        self.control_modes = {"mill":[(100, 90, -0.5), (100, 90, 0.5)], "follow_leader":[(75, 90, 0),(75, 90, -0.5)], "disperse":[(100, 90, -2),(100, 90, 0)], "diffuse":[(50, 270, 0),(0, 270, 2)]}
+        self.control_modes = {
+            "pause": [(0, 0, 0), (0, 0, 0)],
+            "mill": [(100, 90, -0.5), (100, 90, 0.5)],
+            "follow_leader": [(75, 90, 0),(75, 90, -0.5)],
+            "disperse": [(100, 90, -2),(100, 90, 0)],
+            "diffuse": [(50, 270, 0),(0, 270, 2)]
+        }
+        self.cur_mode = 'pause'
 
         self.show = self.can_show_windows()
         if not self.show:
@@ -249,15 +258,14 @@ class BinaryProgram:
         self.board.RGB.setPixelColor(1, self.board.PixelColor(r, g, b))
         self.board.RGB.show()
 
-    def control(self):
-        cur_mode = "" ## replace this with input from package
-        detected_vel = (0, 0, 0)
-        undetected_vel = (0 ,0, 0)
-        if cur_mode in self.control_modes:
-            velocities = self.control_modes[cur_mode]
-            detected_vel = velocities[0]
-            undetected_vel = velocities[1]
+    def control(self, mode):
+        if mode in self.control_modes.keys():
+            self.cur_mode = mode
 
+        velocities = self.control_modes[self.cur_mode]
+        detected_vel = velocities[0]
+        undetected_vel = velocities[1]
+            
         self.set_rgb('green' if bool(self.smoothed_detected) else 'red')
         if not self.dry_run:
             if self.smoothed_detected:  # smoothed_detected is a low-pass filtered detection
@@ -305,7 +313,7 @@ class BinaryProgram:
 
         # print(bool(smoothed_detected), smoothed_detected)
 
-        self.control()  # ################################
+        self.control(self.cur_mode)  # ################################
 
         # draw annotations of detected contours
         if self.detected:
