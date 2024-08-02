@@ -142,7 +142,7 @@ class BinaryProgram:
         self.detected = False
         self.boolean_detection_averager = st.Average(10)
 
-        self.control_modes = {"mill":[(100, 90, -0.5), (100, 90, 0.5)], "follow_leader":[(75, 90, 0),(75, 90, -0.5)], "disperse":[(100, 90, -2),(100, 90, 0)], "scatter":[( ),( )]}
+        self.control_modes = {"mill":[(100, 90, -0.5), (100, 90, 0.5)], "follow_leader":[(75, 90, 0),(75, 90, -0.5)], "disperse":[(100, 90, -2),(100, 90, 0)], "diffuse":[( ),( )]}
 
         self.show = self.can_show_windows()
         if not self.show:
