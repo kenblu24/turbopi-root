@@ -142,6 +142,8 @@ class BinaryProgram:
         self.detected = False
         self.boolean_detection_averager = st.Average(10)
 
+        self.control_modes = {"mill":[(100, 90, -0.5), (100, 90, 0.5)], "follow_leader":[(75, 90, 0),(75, 90, -0.5)], "disperse":[(100, 90, -2),(100, 90, 0)], "scatter":[( ),( )]}
+
         self.show = self.can_show_windows()
         if not self.show:
             print("Failed to create test window.")
@@ -248,6 +250,8 @@ class BinaryProgram:
         self.board.RGB.show()
 
     def control(self):
+
+
         self.set_rgb('green' if bool(self.smoothed_detected) else 'red')
         if not self.dry_run:
             if self.smoothed_detected:  # smoothed_detected is a low-pass filtered detection
