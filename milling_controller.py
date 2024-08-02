@@ -251,6 +251,8 @@ class BinaryProgram:
 
     def control(self):
         cur_mode = "" ## replace this with input from package
+        detected_vel = (0, 0, 0)
+        undetected_vel = (0 ,0, 0)
         if cur_mode in self.control_modes:
             velocities = self.control_modes[cur_mode]
             detected_vel = velocities[0]
