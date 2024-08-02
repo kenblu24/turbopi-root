@@ -142,7 +142,7 @@ class BinaryProgram:
         self.detected = False
         self.boolean_detection_averager = st.Average(10)
 
-        self.control_modes = {"mill":[(100, 90, -0.5), (100, 90, 0.5)], "follow_leader":[(75, 90, 0),(75, 90, -0.5)], "disperse":[(100, 90, -2),(100, 90, 0)], "diffuse":[( ),( )]}
+        self.control_modes = {"mill":[(100, 90, -0.5), (100, 90, 0.5)], "follow_leader":[(75, 90, 0),(75, 90, -0.5)], "disperse":[(100, 90, -2),(100, 90, 0)], "diffuse":[(50, 270, 0),(0, 270, 2)]}
 
         self.show = self.can_show_windows()
         if not self.show:
@@ -250,15 +250,19 @@ class BinaryProgram:
         self.board.RGB.show()
 
     def control(self):
-
+        cur_mode = "" ## replace this with input from package
+        if cur_mode in self.control_modes:
+            velocities = self.control_modes[cur_mode]
+            detected_vel = velocities[0]
+            undetected_vel = velocities[1]
 
         self.set_rgb('green' if bool(self.smoothed_detected) else 'red')
         if not self.dry_run:
             if self.smoothed_detected:  # smoothed_detected is a low-pass filtered detection
-                self.chassis.set_velocity(75, 90, 0)  # Control robot movement function
+                self.chassis.set_velocity(*detected_vel)  # Control robot movement function
                 # linear speed 50 (0~100), direction angle 90 (0~360), yaw angular speed 0 (-2~2)
             else:
-                self.chassis.set_velocity(75, 90, -0.5)
+                self.chassis.set_velocity(*undetected_vel)
 
     def main_loop(self):
         avg_fps = self.fps_averager(self.fps)  # feed the averager
