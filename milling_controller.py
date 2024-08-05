@@ -77,7 +77,7 @@ def udp_listener(program):
             program.pause()
         elif b'switch' in cmd:
             cmd = cmd.strip()
-            BinaryProgram.cur_mode = cmd.removeprefix(b'switch ').decode()
+            program.set_mode(cmd.removeprefix(b'switch ').decode())
 
     while listener_run:
         try:
@@ -182,6 +182,9 @@ class BinaryProgram:
             else:
                 self.dry_run = True
                 self.kill_motors()
+
+    def set_mode(self, mode):
+        self.cur_mode = mode
 
     @staticmethod
     def can_show_windows():
