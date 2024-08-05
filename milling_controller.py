@@ -152,7 +152,7 @@ class BinaryProgram:
             "disperse": [(100, 90, -2),(100, 90, 0)],
             "diffuse": [(50, 270, 0),(0, 270, 2)]
         }
-        self.cur_mode = 'milling'
+        self.cur_mode = 'mill'
 
         self.show = self.can_show_windows()
         if not self.show:
