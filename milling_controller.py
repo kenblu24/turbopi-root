@@ -76,7 +76,7 @@ def udp_listener(program):
         elif b'pause' in cmd:
             program.pause()
         elif b'switch' in cmd:
-            BinaryProgram.cur_mode = cmd.removeprefix(b'switch:').decode()
+            BinaryProgram.cur_mode = cmd.removeprefix(b'switch ').decode()
 
     while listener_run:
         try:
