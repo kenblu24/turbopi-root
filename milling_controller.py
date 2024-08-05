@@ -76,6 +76,7 @@ def udp_listener(program):
         elif b'pause' in cmd:
             program.pause()
         elif b'switch' in cmd:
+            cmd = cmd.strip()
             BinaryProgram.cur_mode = cmd.removeprefix(b'switch ').decode()
 
     while listener_run:
@@ -151,7 +152,7 @@ class BinaryProgram:
             "disperse": [(100, 90, -2),(100, 90, 0)],
             "diffuse": [(50, 270, 0),(0, 270, 2)]
         }
-        self.cur_mode = 'pause'
+        self.cur_mode = 'milling'
 
         self.show = self.can_show_windows()
         if not self.show:
@@ -262,6 +263,7 @@ class BinaryProgram:
         if mode in self.control_modes.keys():
             self.cur_mode = mode
 
+        print(self.cur_mode)
         velocities = self.control_modes[self.cur_mode]
         detected_vel = velocities[0]
         undetected_vel = velocities[1]
