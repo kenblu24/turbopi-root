@@ -48,7 +48,8 @@ def pause_all():
 #     print("Switching to other behavior 2")
 
 def switch(behavior):
-    broadcast(b"    switch " + behavior)
+    message = f"    switch {behavior}"
+    broadcast(message.encode())
     print(f"Switching to behavior {behavior}")
 
 def stop_all(deleteline=True):
@@ -97,10 +98,11 @@ def prompt(state, cmd=None, delprev=False):
     elif cmd.startswith('pa') or cmd.startswith('a'):
         pause_all()
         return 'paused'
-    elif cmd.startwith('switch'):
-        state = cmd[7:]
-        switch(state)
-        return state
+    elif cmd.startswith('switch'):
+        behavior = cmd[7:]
+        print(behavior + "\n")
+        switch(behavior)
+        return behavior
     elif cmd.startswith('s') and cmd != 'st' or cmd == "'":
         stop_all()
         return 'stopped'
@@ -122,7 +124,7 @@ def phelp():
     print("    start (\\)      stop (s/')")
     print("    pause (a)      unpause / resume (u/r)")
     print("    quit now (qn)  quit (q) and stop all")
-    print("switchall1 or switchall2")
+    print("switch <behavior> switch to a different behavior")
 
 
 if __name__ == '__main__':
