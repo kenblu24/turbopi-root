@@ -151,7 +151,9 @@ class BinaryProgram:
             "follow_leader": [(75, 90, 0),(75, 90, -0.5)],
             "disperse": [(100, 90, -2),(100, 90, 0)],
             "diffuse": [(50, 270, 0),(0, 270, 2)],
-            "straight": [(50, 90, 0), (50, 90, 0)]
+            "straight": [(50, 90, 0), (50, 90, 0)],
+            "circle": [(50, 90, 0.5), (50, 90, 0.5)],
+            
         }
 
         self.cur_mode = 'pause'
