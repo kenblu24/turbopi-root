@@ -150,9 +150,11 @@ class BinaryProgram:
             "mill": [(100, 90, -0.5), (100, 90, 0.5)],
             "follow_leader": [(75, 90, 0),(75, 90, -0.5)],
             "disperse": [(100, 90, -2),(100, 90, 0)],
-            "diffuse": [(50, 270, 0),(0, 270, 2)]
+            "diffuse": [(50, 270, 0),(0, 270, 2)],
+            "straight": [(50, 90, 0), (50, 90, 0)]
         }
-        self.cur_mode = 'mill'
+
+        self.cur_mode = 'pause'
 
         self.show = self.can_show_windows()
         if not self.show:
