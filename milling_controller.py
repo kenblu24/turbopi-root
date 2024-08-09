@@ -130,8 +130,8 @@ class BinaryProgram:
         self.detected = False
         self.boolean_detection_averager = st.Average(10)
         
-        self.log_file = '/home/pi/TurboPi/pi/logs/' + datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + '.csv'
-        self.history = ['sensed', 'speed', 'turn_rate'] # for recording history into a csv
+        self.log_file = '/home/pi/logs/' + datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S") + '.csv'
+        self.history = [['detection', 'smoothed_detection', 'time']] # for recording history into a csv
 
         self.show = self.can_show_windows()
         if not self.show:
@@ -250,7 +250,7 @@ class BinaryProgram:
             else:
                 self.chassis.set_velocity(100, 90, 0.5)
         
-        self.history.append(self.smoothed_detected, self.chassis.get_velocity()[0], self.chassis.get_velocity()[1])
+        self.history.append([self.detected, self.smoothed_detected, datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S.%f")])
 
     def main_loop(self):
         avg_fps = self.fps_averager(self.fps)  # feed the averager
