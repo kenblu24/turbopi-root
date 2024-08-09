@@ -18,6 +18,8 @@ import argparse
 import socket
 import threading
 import RPi.GPIO as GPIO
+import csv
+import datetime
 
 # import yaml_handle
 import HiwonderSDK.Board as Board
@@ -127,6 +129,9 @@ class BinaryProgram:
         self.fps_averager = st.Average(10)
         self.detected = False
         self.boolean_detection_averager = st.Average(10)
+        
+        self.log_file = '/home/pi/TurboPi/pi/logs/' + datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + '.csv'
+        self.history = ['sensed', 'speed', 'turn_rate'] # for recording history into a csv
 
         self.show = self.can_show_windows()
         if not self.show:
@@ -199,6 +204,11 @@ class BinaryProgram:
         print("ColorDetect Resumed")
 
     def stop(self):
+        # Logs the history of the robot's detections, speed, and turn rate to a csv file
+        with open(self.log_file, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(self.history)
+
         self._run = False
         self.chassis.set_velocity(0, 0, 0)
         if self.camera:
@@ -239,6 +249,8 @@ class BinaryProgram:
                 # linear speed 50 (0~100), direction angle 90 (0~360), yaw angular speed 0 (-2~2)
             else:
                 self.chassis.set_velocity(100, 90, 0.5)
+        
+        self.history.append(self.smoothed_detected, self.chassis.get_velocity()[0], self.chassis.get_velocity()[1])
 
     def main_loop(self):
         avg_fps = self.fps_averager(self.fps)  # feed the averager
