@@ -270,7 +270,11 @@ class BinaryProgram:
             self.cur_mode = mode
 
         print(self.cur_mode)
-        velocities = self.control_modes[self.cur_mode]
+        try:
+            velocities = self.control_modes[self.cur_mode]
+        except KeyError:
+            velocities = self.control_modes['pause']
+            print("Invalid mode, pausing.")
         detected_vel = velocities[0]
         undetected_vel = velocities[1]
             
